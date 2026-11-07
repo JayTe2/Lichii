@@ -566,6 +566,23 @@ jobs:
             -always-overwrite -verbose=1
           # Qt's virtual keyboard input plugin pulls in the QML stack, which the emulator doesn't use.
           rm -f "$app/Contents/PlugIns/platforminputcontexts/libqtvirtualkeyboardplugin.dylib"
+          # macdeployqt can leave absolute Homebrew paths behind (seen on Intel): bundle them.
+          fw="$app/Contents/Frameworks"
+          for pass in 1 2 3; do
+            find "$app/Contents" -type f \( -perm -u+x -o -name '*.dylib' \) \
+              -exec sh -c 'file -b "$1" | grep -q Mach-O' _ {} \; -print | while read -r binary; do
+              otool -L "$binary" | awk 'NR>1 {print $1}' |
+                { grep -E '^/(opt/homebrew|usr/local)/' || true; } | while read -r dep; do
+                  name=$(basename "$dep")
+                  if [ ! -f "$fw/$name" ]; then
+                    cp "$dep" "$fw/$name"
+                    chmod u+w "$fw/$name"
+                    install_name_tool -id "@executable_path/../Frameworks/$name" "$fw/$name" 2> /dev/null
+                  fi
+                  install_name_tool -change "$dep" "@executable_path/../Frameworks/$name" "$binary" 2> /dev/null
+                done
+            done
+          done
           binaries=$(find "$app/Contents" -type f \( -perm -u+x -o -name '*.dylib' \) \
             -exec sh -c 'file -b "$1" | grep -q Mach-O' _ {} \; -print)
           for binary in $binaries; do
