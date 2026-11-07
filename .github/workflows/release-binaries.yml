@@ -574,6 +574,13 @@ jobs:
               otool -L "$binary" | awk 'NR>1 {print $1}' |
                 { grep -E '^/(opt/homebrew|usr/local)/' || true; } | while read -r dep; do
                   name=$(basename "$dep")
+                  echo "Bundling $dep (referenced by $binary)"
+                  chmod u+w "$binary"
+                  # A bundled library whose own install name still points at Homebrew.
+                  if [ "$(basename "$binary")" = "$name" ]; then
+                    install_name_tool -id "@executable_path/../Frameworks/$name" "$binary" 2> /dev/null
+                    continue
+                  fi
                   if [ ! -f "$fw/$name" ]; then
                     cp "$dep" "$fw/$name"
                     chmod u+w "$fw/$name"
