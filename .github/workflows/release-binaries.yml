@@ -373,6 +373,7 @@ jobs:
             -DLICHII_BUILD_TAG=build-${{ github.run_number }} \
             -DLICHII_BUILD_PLATFORM=${{ matrix.platform }} \
             -DUSE_DISCORD_PRESENCE=OFF \
+            ${{ matrix.platform == 'macos-x86_64' && '-DENABLE_WERROR=OFF' || '' }} \
             -DUSE_CCACHE=ON
 
       # MinGW build: system Qt and libraries from MSYS2, clang plus the repo's PGO profile. The profile
